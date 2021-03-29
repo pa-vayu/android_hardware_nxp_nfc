@@ -1667,7 +1667,7 @@ int phNxpNciHal_core_initialized(uint16_t core_init_rsp_params_len, uint8_t* p_c
       // Check the permissible range [0 - 60]
       if (0 <= retlen && retlen <= 60) {
         if (0 < retlen) {
-          unsigned int timeout = retlen * 1000;
+          unsigned int timeout = (uint32_t)retlen * 1000;
           unsigned int timeoutHx = 0x0000;
 
           char tmpbuffer[10] = {0};
@@ -2258,33 +2258,32 @@ void phNxpNciHal_getVendorConfig(android::hardware::nfc::V1_1::NfcConfig& config
 
   config.nfaPollBailOutMode = true;
   if (GetNxpNumValue(NAME_ISO_DEP_MAX_TRANSCEIVE, &num, sizeof(num))) {
-    config.maxIsoDepTransceiveLength = num;
+    config.maxIsoDepTransceiveLength = (uint32_t)num;
   }
   if (GetNxpNumValue(NAME_DEFAULT_OFFHOST_ROUTE, &num, sizeof(num))) {
-    config.defaultOffHostRoute = num;
+    config.defaultOffHostRoute = (uint8_t)num;
   }
   if (GetNxpNumValue(NAME_DEFAULT_NFCF_ROUTE, &num, sizeof(num))) {
-    config.defaultOffHostRouteFelica = num;
+    config.defaultOffHostRouteFelica = (uint8_t)num;
   }
   if (GetNxpNumValue(NAME_DEFAULT_SYS_CODE_ROUTE, &num, sizeof(num))) {
-    config.defaultSystemCodeRoute = num;
+    config.defaultSystemCodeRoute = (uint8_t)num;
   }
   if (GetNxpNumValue(NAME_DEFAULT_SYS_CODE_PWR_STATE, &num, sizeof(num))) {
-    config.defaultSystemCodePowerState = num;
+    config.defaultSystemCodePowerState = (uint8_t)num;
   }
   if (GetNxpNumValue(NAME_DEFAULT_ROUTE, &num, sizeof(num))) {
-    config.defaultRoute = num;
+    config.defaultRoute = (uint8_t)num;
   }
   if (GetNxpByteArrayValue(NAME_DEVICE_HOST_WHITE_LIST, (char*)buffer.data(), buffer.size(), &retlen)) {
     config.hostWhitelist.resize(retlen);
-    for(int i=0; i<retlen; i++)
-      config.hostWhitelist[i] = buffer[i];
+    for(long i=0; i<retlen; i++) config.hostWhitelist[i] = buffer[i];
   }
   if (GetNxpNumValue(NAME_OFF_HOST_ESE_PIPE_ID, &num, sizeof(num))) {
-    config.offHostESEPipeId = num;
+    config.offHostESEPipeId = (uint8_t)num;
   }
   if (GetNxpNumValue(NAME_OFF_HOST_SIM_PIPE_ID, &num, sizeof(num))) {
-    config.offHostSIMPipeId = num;
+    config.offHostSIMPipeId = (uint8_t)num;
   }
   if ((GetNxpByteArrayValue(NAME_NFA_PROPRIETARY_CFG, (char*)buffer.data(), buffer.size(), &retlen))
          && (retlen == 9)) {
@@ -3223,21 +3222,36 @@ static void phNxpNciHal_print_res_status(uint8_t* p_rx_data, uint16_t* p_len) {
       NXPLOG_NCIHAL_D("%s: response status =%s", __func__, response_buf[11]);
     }
     if (phNxpNciClock.isClockSet) {
-      int i;
-      for (i = 0; i < *p_len; i++) {
+      int i, len = sizeof(phNxpNciClock.p_rx_data);
+      if (*p_len > len) {
+        android_errorWriteLog(0x534e4554, "169257710");
+      } else {
+        len = *p_len;
+      }
+      for (i = 0; i < len; i++) {
         phNxpNciClock.p_rx_data[i] = p_rx_data[i];
       }
     }
 
     else if (phNxpNciRfSet.isGetRfSetting) {
-      int i;
-      for (i = 0; i < *p_len; i++) {
+      int i, len = sizeof(phNxpNciRfSet.p_rx_data);
+      if (*p_len > len) {
+        android_errorWriteLog(0x534e4554, "169258733");
+      } else {
+        len = *p_len;
+      }
+      for (i = 0; i < len; i++) {
         phNxpNciRfSet.p_rx_data[i] = p_rx_data[i];
         // NXPLOG_NCIHAL_D("%s: response status =0x%x",__func__,p_rx_data[i]);
       }
     } else if (phNxpNciMwEepromArea.isGetEepromArea) {
-      int i;
-      for (i = 8; i < *p_len; i++) {
+      int i, len = sizeof(phNxpNciMwEepromArea.p_rx_data) + 8;
+      if (*p_len > len) {
+        android_errorWriteLog(0x534e4554, "169258884");
+      } else {
+        len = *p_len;
+      }
+      for (i = 8; i < len; i++) {
         phNxpNciMwEepromArea.p_rx_data[i - 8] = p_rx_data[i];
       }
     } else if (nxpncihal_ctrl.phNxpNciGpioInfo.state == GPIO_STORE) {
@@ -3249,7 +3263,7 @@ static void phNxpNciHal_print_res_status(uint8_t* p_rx_data, uint16_t* p_len) {
         nxpncihal_ctrl.phNxpNciGpioInfo.values[0] = p_rx_data[9];
         nxpncihal_ctrl.phNxpNciGpioInfo.values[1] = p_rx_data[8];
     }
-}
+  }
 
   if (p_rx_data[2] && (config_access == true)) {
     if (p_rx_data[3] != NFCSTATUS_SUCCESS) {
